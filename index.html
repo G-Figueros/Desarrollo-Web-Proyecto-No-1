@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Alamedas de Santa Ana</title>
+  <link rel="stylesheet" href="./assets/css/styles.css"/>
+</head>
+<body>
+
+  <header>
+    <div class="nav-wrap">
+      <h1 class="brand">
+        <span class="logo" aria-hidden="true"></span>
+        Alamedas de Santa Ana
+      </h1>
+
+      <button
+        class="menu-toggle"
+        aria-label="Abrir menú"
+        aria-controls="site-nav"
+        aria-expanded="false"
+      >
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M3 6h18M3 12h18M3 18h18"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+
+      <nav id="site-nav" data-state="closed">
+        <ul>
+          <li><a href="./index.html">Inicio</a></li>
+          <li><a href="./calendario.html">Calendario</a></li>
+          <li><a href="./consulta.html">Consulta</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+
+  <main class="container">
+    <section id="home" class="section">
+      <h2>Bienvenidos a Alamedas de Santa Ana</h2>
+      <p>Tu lugar ideal para vivir en Santa Ana.</p>
+      <p>Residencial familiar orientado a la tranquilidad, seguridad y convivencia. En este portal encontrarás noticias recientes, calendario de actividades, galería multimedia y la ubicación del complejo.</p>
+
+      <!-- Tarjetas de imagenes y video -->
+      <div class="carousel" aria-label="Galería de imágenes del residencial">
+        
+        <input type="radio" name="slides" id="slide-1" checked>
+        <input type="radio" name="slides" id="slide-2">
+        <input type="radio" name="slides" id="slide-3">
+        <input type="radio" name="slides" id="slide-4">
+
+      <div class="slides">
+        <figure class="card">
+          <img src="./assets/img/Imagen1.jpg" alt="Áreas verdes y casas del residencial">
+          <figcaption>Áreas verdes</figcaption>
+        </figure>
+        <figure class="card">
+          <img src="./assets/img/Imagen2.jpg" alt="Acceso principal del residencial">
+          <figcaption>Acceso principal</figcaption>
+        </figure>
+        <figure class="card">
+          <img src="./assets/img/Imagen3.jpg" alt="Zona social del residencial">
+          <figcaption>Zona social</figcaption>
+        </figure>
+        
+        <figure class="card">
+          <div class="video-wrap">
+            <iframe src="https://www.youtube.com/embed/gEj4oixw1d0"
+              title="Video de presentación de Alamedas de Santa Ana"
+              frameborder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowfullscreen>
+            </iframe>
+          </div>
+          <figcaption>Video institucional</figcaption>
+        </figure>
+      </div>
+
+      <div class="dots" role="tablist" aria-label="Paginación de galería">
+        <label for="slide-1" role="tab" aria-controls="slide-1"></label>
+        <label for="slide-2" role="tab" aria-controls="slide-2"></label>
+        <label for="slide-3" role="tab" aria-controls="slide-3"></label>
+        <label for="slide-4" role="tab" aria-controls="slide-4"></label>
+      </div>
+
+      </div>
+    </section>
+
+    <!-- Noticias -->
+    <section id="noticias" class="section">
+      <h2>Noticias recientes</h2>
+      <p class="muted">Últimas publicaciones del residencial.</p>
+
+      <div class="card" style="padding:1rem; margin-top:1rem;">
+        <ul id="newsUl" style="list-style:none; padding:0; margin:0; display:grid; gap:.75rem;">
+          <li class="muted">Cargando noticias…</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="servicios" class="section">
+      <h2>Ubicación</h2>
+      <p>Estamos ubicados en el corazón de Santa Ana, cerca de todas las comodidades que necesitas.</p>
+      <div class="map-wrap">
+        <iframe class="map"
+          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3860.848472447853!2d-90.4725130242586!3d14.607706376901433!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8589a3f01b83ba8b%3A0x711be9f075a56596!2sSan%20Isidro%20zona%2016!5e0!3m2!1ses-419!2sgt!4v1756433241865!5m2!1ses-419!2sgt"
+          width="600" height="450" style="border:0;" allowfullscreen=""
+          loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      </div>
+    </section>
+
+    <section id="about" class="section">
+      <h2>Sobre nosotros</h2>
+      <div class="chips">
+        <span class="chip">Gabriel Figueros Cardona · 0900 22 9287</span>
+        <span class="chip">Josue Fernando Tumax Baquiax · 0900 22 8742</span>
+        <span class="chip">Jeremy Alejandro de Leon Roa · 0900 22 2413</span>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="nav-wrap">
+      <p>&copy; Universidad Mariano Gálvez de Guatemala</p>
+    </div>
+  </footer>
+
+    <!-- Ruta de BD -->
+  <script src="./assets/sqljs/sql-wasm.js"></script>
+  <script src="./app.js"></script>
+  <script>
+
+  // Lecutra de noticias
+  function loadNews(limit = 6) {
+    const ul = document.getElementById('newsUl');
+    if (!ul) return;
+
+    try {
+      const rows = DB.queryAll(`
+        SELECT Fecha, Noticia
+        FROM NOTICIAS
+        ORDER BY Fecha DESC, cod_noticia DESC
+        LIMIT ?;
+      `, [limit]);
+      // stmt.bind([limit]);
+
+      /* const rows = [];
+      while (stmt.step()) rows.push(stmt.getAsObject());
+      stmt.free(); */
+
+      ul.innerHTML = rows.length
+        ? rows.map(r => `
+            <li class="card" style="padding:.9rem;">
+              <div style="font-weight:600;">${escapeHTML(r.Noticia || '')}</div>
+              <div class="muted" style="font-size:.9rem; margin-top:.2rem;">
+                ${escapeHTML(r.Fecha || '')}
+              </div>
+            </li>
+          `).join('')
+        : '<li class="muted">No hay noticias disponibles.</li>';
+    } catch (e) {
+      console.error(e);
+      ul.innerHTML = '<li class="muted">No se pudieron leer noticias de la BD.</li>';
+    }
+  }
+
+  // Utilidad para evitar inyección en HTML
+  function escapeHTML(s) {
+    return String(s).replace(/[&<>"']/g, m => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;', "'":'&#39;'
+    }[m]));
+  }
+
+  // Arranque
+  document.addEventListener('DOMContentLoaded', async () => {
+    try {
+      await DB.open();
+      loadNews(6);
+    } catch (e) {
+      console.error(e);
+      const ul = document.getElementById('newsUl');
+      if (ul) ul.innerHTML = '<li class="muted">No se pudo cargar la base de datos.</li>';
+    }
+  });
+
+    (function () {
+    const btn = document.querySelector('.menu-toggle');
+    const nav = document.getElementById('site-nav');
+
+    function toggleMenu() {
+      const open = nav.getAttribute('data-state') === 'open';
+      nav.setAttribute('data-state', open ? 'closed' : 'open');
+      btn.setAttribute('aria-expanded', String(!open));
+    }
+
+    btn?.addEventListener('click', toggleMenu);
+
+    // Cierra al hacer clic en un enlace (opcional)
+    nav?.addEventListener('click', (e) => {
+      if (e.target.matches('a')) {
+        nav.setAttribute('data-state', 'closed');
+        btn.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    // Cierra si se redimensiona a escritorio
+    const mq = window.matchMedia('(min-width: 801px)');
+    mq.addEventListener?.('change', e => {
+      if (e.matches) {
+        nav.setAttribute('data-state', 'open');
+        btn.setAttribute('aria-expanded', 'true');
+      } else {
+        nav.setAttribute('data-state', 'closed');
+        btn.setAttribute('aria-expanded', 'false');
+      }
+    });
+  })();
+  </script>
+</body>
+</html>

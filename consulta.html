@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Consulta de inquilinos — Alamedas de Santa Ana</title>
+  <link rel="stylesheet" href="./assets/css/styles.css"/>
+</head>
+<body>
+  <header>
+    <div class="nav-wrap">
+      <h1 class="brand">
+        <span class="logo" aria-hidden="true"></span>
+        Alamedas de Santa Ana
+      </h1>
+
+      <button
+        class="menu-toggle"
+        aria-label="Abrir menú"
+        aria-controls="site-nav"
+        aria-expanded="false"
+      >
+
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M3 6h18M3 12h18M3 18h18"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+
+      <nav id="site-nav" data-state="closed">
+        <ul>
+          <li><a href="./index.html">Inicio</a></li>
+          <li><a href="./calendario.html">Calendario</a></li>
+          <li><a href="./consulta.html">Consulta</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+
+  <main class="container">
+    <!-- FORMULARIO DE CONSULTA -->
+    <section id="consulta" class="section">
+      <h2>Validación de identidad</h2>
+      <form id="frmConsulta" class="card" style="padding:1.2rem;">
+        <label for="dpi">DPI (13 dígitos)</label>
+        <input id="dpi" maxlength="13" required />
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:.8rem; margin-top:.8rem;">
+          <div>
+            <label for="nombre">Primer Nombre</label>
+            <input id="nombre" required />
+          </div>
+          <div>
+            <label for="apellido">Primer Apellido</label>
+            <input id="apellido" required />
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:.8rem; margin-top:.8rem;">
+          <div>
+            <label for="fecha">Fecha de nacimiento</label>
+            <input id="fecha" type="date" required />
+          </div>
+          <div>
+            <label for="casa">Número de casa</label>
+            <input id="casa" inputmode="numeric" required />
+          </div>
+        </div>
+
+        <div style="text-align:center; margin-top:1.2rem;">
+          <button type="submit" class="chip">Consultar estado actual</button>
+        </div>
+      </form>
+
+      <div id="resultado" class="card" style="padding:1rem; margin-top:1rem;">
+        <p class="muted">Aquí aparecerá el resultado de la consulta...</p>
+      </div>
+    </section>
+
+    <section id="historial" class="section">
+      <h2>Historial de pagos</h2>
+      <form id="frmHistorial" class="card" style="padding:1.2rem;">
+        <label for="casaH">Número de casa</label>
+        <input id="casaH" inputmode="numeric" required />
+
+        <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:.8rem; margin-top:.8rem;">
+          <div>
+            <label for="desdeAnio">Desde Año</label>
+            <input id="desdeAnio" inputmode="numeric" placeholder="2024" required />
+          </div>
+          <div>
+            <label for="desdeMes">Desde Mes</label>
+            <input id="desdeMes" inputmode="numeric" placeholder="1..12" required />
+          </div>
+          <div>
+            <label for="hastaAnio">Hasta Año</label>
+            <input id="hastaAnio" inputmode="numeric" placeholder="2025" required />
+          </div>
+          <div>
+            <label for="hastaMes">Hasta Mes</label>
+            <input id="hastaMes" inputmode="numeric" placeholder="1..12" required />
+          </div>
+        </div>
+
+        <div style="text-align:center; margin-top:1.2rem;">
+          <button id="btnHistorial" type="button" class="chip">Consultar historial</button>
+        </div>
+      </form>
+
+      <div class="card" style="padding:1rem; margin-top:1rem; overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse;">
+          <thead>
+            <tr>
+              <th>Casa</th>
+              <th>Año</th>
+              <th>Mes</th>
+              <th>Fecha de Pago</th>
+            </tr>
+          </thead>
+          <tbody id="historialBody">
+            <tr><td colspan="4" class="muted">Sin resultados...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="nav-wrap">
+      <p>&copy; Universidad Mariano Gálvez de Guatemala · Proyecto académico</p>
+    </div>
+  </footer>
+  <script src="./assets/sqljs/sql-wasm.js"></script>
+  <script src="./app.js"></script>
+  <script>
+    function nowGT() {
+      const d = new Date();
+      return { year: d.getFullYear(), month: d.getMonth()+1 };
+    }
+
+    function soloDigitos(s){ return (s ?? '').toString().replace(/\D/g,''); }
+
+    function validarDPI(v){
+      return soloDigitos(v).length === 13;
+    }
+    
+    function validarNombre(v){
+      return /^[\p{L}' -]{2,}$/u.test((v ?? '').toString().trim());
+    }
+
+    function validarFechaISO(v){
+      const s = (v ?? '').toString().trim();
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+      const [y,m,d] = s.split('-').map(Number);
+      const dt = new Date(Date.UTC(y, m-1, d));
+      return dt.getUTCFullYear()===y && (dt.getUTCMonth()+1)===m && dt.getUTCDate()===d;
+    }
+    function i(v){ return document.getElementById(v); }
+
+    function findInquilino({ dpi, nombre, apellido, fechaNac, casa }) {
+
+      const row = DB.queryOne("SELECT * FROM INQUILINO WHERE DPI = ?", [dpi]);
+      if (!row) return null;
+      
+      return row;
+    }
+
+    function pagoAlDia({ cod_inquilino, year, month }) {
+      const row = DB.queryOne(
+        "SELECT 1 AS ok FROM PAGO_CUOTAS WHERE cod_inquilino=? AND Anio=? AND Mes=?",
+        [cod_inquilino, String(year), String(month)]
+      );
+
+      console.log('row => ', row)
+
+      return !!row;
+    }
+
+    function historialPagos({ casa, dA, dM, hA, hM }) {
+      const idx = (y,m) => y*100+m;
+      const lo=idx(dA,dM), hi=idx(hA,hM);
+      const rows = DB.queryAll("SELECT * FROM PAGO_CUOTAS PC INNER JOIN INQUILINO I ON PC.cod_inquilino = I.cod_inquilino WHERE I.numero_casa = ? ORDER BY PC.Anio DESC, PC.Mes DESC", [casa]);
+      
+      console.log('rows => ', rows)
+
+      return rows.filter(r => {
+        const k = idx(Number(r.Anio), Number(r.Mes));
+        return k>=lo && k<=hi;
+      })
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      await DB.open();
+
+      i("frmConsulta").addEventListener("submit", ev => {
+        ev.preventDefault();
+        const dpi=i("dpi").value, casa=i("casa").value, nombre=i("nombre").value,
+              apellido=i("apellido").value, fecha=i("fecha").value;
+
+        console.log('fecha => ', fecha)
+
+        console.log(validarDPI(dpi))
+
+        if(!validarDPI(dpi)) return alert("DPI inválido");
+        if(!validarNombre(nombre)) return alert("Nombre inválido");
+        if(!validarNombre(apellido)) return alert("Apellido inválido");
+        // if(!validarFechaISO(fecha)) return alert("Fecha inválida");
+        if(!casa) return alert("Casa inválida");
+
+        const match=findInquilino({dpi,nombre,apellido,fechaNac:fecha,casa});
+        console.log('match => ', match)
+        const out=i("resultado");
+        if(!match){
+          out.innerHTML='<p class=\"warn\">Datos no coinciden con ningún inquilino.</p>';
+          return;
+        }
+        const {year,month}=nowGT();
+        const ok=pagoAlDia({cod_inquilino: match.cod_inquilino,year,month});
+        out.innerHTML= ok
+          ? `<p class=\"ok\">Cuota de mantenimiento al día</p><p class=\"muted\">Casa ${casa} — ${month}/${year}</p>`
+          : `<p class=\"warn\">Cuota de mantenimiento pendiente</p><p class=\"muted\">Casa ${casa} — ${month}/${year}</p>`;
+      });
+
+      i("btnHistorial").addEventListener("click", ()=>{
+        const casa=Number(i("casaH").value),
+              dA=Number(i("desdeAnio").value), dM=Number(i("desdeMes").value),
+              hA=Number(i("hastaAnio").value), hM=Number(i("hastaMes").value);
+
+        if(![casa,dA,dM,hA,hM].every(Number.isFinite)) return alert("Datos inválidos");
+        if(dM<1||dM>12||hM<1||hM>12) return alert("Mes debe ser 1-12");
+
+        const rows=historialPagos({casa,dA,dM,hA,hM});
+        const body=i("historialBody");
+        body.innerHTML= rows.length
+          ? rows.map(r=>`<tr><td>${r.numero_casa}</td><td>${r.Anio}</td><td>${r.Mes}</td><td>${r.fecha_pago}</td></tr>`).join("")
+          : '<tr><td colspan=\"4\" class=\"muted\">Sin resultados en el rango</td></tr>';
+      });
+    });
+
+      (function () {
+    const btn = document.querySelector('.menu-toggle');
+    const nav = document.getElementById('site-nav');
+
+    function toggleMenu() {
+      const open = nav.getAttribute('data-state') === 'open';
+      nav.setAttribute('data-state', open ? 'closed' : 'open');
+      btn.setAttribute('aria-expanded', String(!open));
+    }
+
+    btn?.addEventListener('click', toggleMenu);
+
+    // Cierra al hacer clic en un enlace (opcional)
+    nav?.addEventListener('click', (e) => {
+      if (e.target.matches('a')) {
+        nav.setAttribute('data-state', 'closed');
+        btn.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    // Cierra si se redimensiona a escritorio
+    const mq = window.matchMedia('(min-width: 801px)');
+    mq.addEventListener?.('change', e => {
+      if (e.matches) {
+        nav.setAttribute('data-state', 'open');
+        btn.setAttribute('aria-expanded', 'true');
+      } else {
+        nav.setAttribute('data-state', 'closed');
+        btn.setAttribute('aria-expanded', 'false');
+      }
+    });
+  })();
+  </script>
+</body>
+</html>

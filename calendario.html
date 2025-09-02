@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Calendario de Actividades - Alamedas de Santa Ana</title>
+  <link rel="stylesheet" href="./assets/css/styles.css"/>
+</head>
+
+<body>
+  <header>
+    <div class="nav-wrap">
+      <h1 class="brand">
+        <span class="logo" aria-hidden="true"></span>
+        Alamedas de Santa Ana
+      </h1>
+
+      <button
+        class="menu-toggle"
+        aria-label="Abrir menú"
+        aria-controls="site-nav"
+        aria-expanded="false"
+      >
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M3 6h18M3 12h18M3 18h18"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+
+      <nav id="site-nav" data-state="closed">
+        <ul>
+          <li><a href="./index.html">Inicio</a></li>
+          <li><a href="./calendario.html">Calendario</a></li>
+          <li><a href="./consulta.html">Consulta</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="section">
+      <h2>Calendario de Actividades</h2>
+      <p>Selecciona el mes y año para consultar las actividades programadas.</p>
+
+      <form id="calendar-form" class="cal-toolbar">
+        <label>
+          Mes:
+          <select id="month" name="month">
+            <option value="0">Enero</option>
+            <option value="1">Febrero</option>
+            <option value="2">Marzo</option>
+            <option value="3">Abril</option>
+            <option value="4">Mayo</option>
+            <option value="5">Junio</option>
+            <option value="6">Julio</option>
+            <option value="7">Agosto</option>
+            <option value="8">Septiembre</option>
+            <option value="9">Octubre</option>
+            <option value="10">Noviembre</option>
+            <option value="11">Diciembre</option>
+          </select>
+        </label>
+        <label>
+          Año:
+          <input type="number" id="year" name="year" min="2000" max="2100" value="2025"/>
+        </label>
+        <button type="submit" class="close-btn">Mostrar</button>
+      </form>
+
+      <div class="cal-grid-scroll" aria-label="Calendario mensual">
+        <div class="calendar" id="calendar">
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <div class="modal" id="event-modal">
+    <div class="modal-content">
+      <h3 id="modal-title"></h3>
+      <p id="modal-desc"></p>
+      <button class="close-btn" onclick="closeModal()">Cerrar</button>
+    </div>
+  </div>
+
+  <footer>
+    <div class="nav-wrap">
+      <p>&copy; Universidad Mariano Gálvez de Guatemala</p>
+    </div>
+  </footer>
+  <script src="./assets/sqljs/sql-wasm.js"></script>
+  <script src="./app.js"></script>
+  <script>
+    /* let SQL, db;
+
+    async function initDB() {
+      SQL = await initSqlJs({ locateFile: f => `./assets/sqljs/${f}` });
+      const res = await fetch(`./db/dbProyecto.db?ts=${Date.now()}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error('No se pudo descargar la BD');
+      const buf = await res.arrayBuffer();
+      db = new SQL.Database(new Uint8Array(buf));
+    } */
+
+    function getEventsByDay(month, year) {
+      const pad = n => String(n).padStart(2, '0');
+      const start = `${year}-${pad(month+1)}-01`;
+      const nextMonth = new Date(year, month + 1, 1);
+      const nextStart = `${nextMonth.getFullYear()}-${pad(nextMonth.getMonth()+1)}-01`;
+
+      const map = [];
+      const rows = DB.queryAll(`
+        SELECT Fecha, Titulo, Descripcion
+        FROM CALENDARIO
+        WHERE Fecha >= ? AND Fecha < ?
+        ORDER BY Fecha, cod_calendario
+      `, [start, nextStart]);
+
+      rows.forEach(row => {
+        const dayNum = parseInt(row.Fecha.split('-')[2], 10);
+        // if (!map[dayNum]) map[dayNum] = [];
+        if (!map[dayNum]) map[dayNum] = [];
+        map[dayNum].push({
+          titulo: row.Titulo || '',
+          desc: row.Descripcion || '',
+          fecha: row.Fecha
+        });
+      })
+
+      console.log('map => ', map)
+
+      return map;
+    }
+
+    const calendarEl = document.getElementById("calendar");
+    const modal = document.getElementById("event-modal");
+    const modalTitle = document.getElementById("modal-title");
+    const modalDesc = document.getElementById("modal-desc");
+
+    function renderCalendar(month, year, eventsByDay) {
+      calendarEl.innerHTML = "";
+      const daysOfWeek = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+
+      // Encabezados
+      daysOfWeek.forEach(d => {
+        const div = document.createElement("div");
+        div.className = "day-header";
+        div.textContent = d;
+        calendarEl.appendChild(div);
+      });
+
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month+1, 0).getDate();
+
+      // celdas en blanco antes del día 1
+      for (let i=0; i<firstDay; i++) {
+        calendarEl.appendChild(document.createElement("div"));
+      }
+
+      for (let d=1; d<=daysInMonth; d++) {
+        const cell = document.createElement("div");
+        cell.className = "day";
+
+        const num = document.createElement('span');
+        num.className = 'day-num';
+        num.textContent = d;
+        cell.appendChild(num);
+
+        const dayEvents = eventsByDay[d] || [];
+        dayEvents.forEach(ev => {
+          const el = document.createElement('span');
+          el.className = 'event';
+          el.textContent = ev.titulo;
+          el.title = ev.fecha;
+          el.onclick = () => showModal(ev.titulo, ev.desc || '(Sin descripción)');
+          cell.appendChild(el);
+        });
+
+        calendarEl.appendChild(cell);
+      }
+    }
+
+    function showModal(title, desc) {
+      modalTitle.textContent = title;
+      modalDesc.textContent = desc;
+      modal.style.display = "flex";
+    }
+    function closeModal() { modal.style.display = "none"; }
+
+    function getSelectedMonthYear() {
+      return {
+        month: parseInt(document.getElementById("month").value, 10),
+        year: parseInt(document.getElementById("year").value, 10)
+      };
+    }
+
+    async function refreshCalendar() {
+      const { month, year } = getSelectedMonthYear();
+      const eventsByDay = getEventsByDay(month, year);
+      renderCalendar(month, year, eventsByDay);
+    }
+
+    document.getElementById("calendar-form").addEventListener("submit", async e => {
+      e.preventDefault();
+      await refreshCalendar();
+    });
+
+    (async () => {
+      try {
+        await DB.open();
+        const today = new Date();
+        document.getElementById("month").value = today.getMonth();
+        document.getElementById("year").value = today.getFullYear();
+        await refreshCalendar();
+      } catch (err) {
+        console.error(err);
+        calendarEl.innerHTML = `<div class="muted">No se pudo cargar la base de datos o los eventos.</div>`;
+      }
+    })();
+
+    (function () {
+      const btn = document.querySelector('.menu-toggle');
+      const nav = document.getElementById('site-nav');
+
+      function toggleMenu() {
+        const open = nav.getAttribute('data-state') === 'open';
+        nav.setAttribute('data-state', open ? 'closed' : 'open');
+        btn.setAttribute('aria-expanded', String(!open));
+      }
+
+      btn?.addEventListener('click', toggleMenu);
+
+      nav?.addEventListener('click', (e) => {
+        if (e.target.matches('a')) {
+          nav.setAttribute('data-state', 'closed');
+          btn.setAttribute('aria-expanded', 'false');
+        }
+      });
+
+      const mq = window.matchMedia('(min-width: 801px)');
+      mq.addEventListener?.('change', e => {
+        if (e.matches) {
+          nav.setAttribute('data-state', 'open');
+          btn.setAttribute('aria-expanded', 'true');
+        } else {
+          nav.setAttribute('data-state', 'closed');
+          btn.setAttribute('aria-expanded', 'false');
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
